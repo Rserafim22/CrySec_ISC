@@ -21,11 +21,17 @@ class Client():
 		to_send = b''
 		if not message:
 			return None
-		if message[0] == '-s' or message == '/health':
-			to_send = utils.create_text_message(''.join(message[1::]),utils.BPC,True)
+		print(message)
+		if message[0] == '-s': 
+			to_send = utils.create_text_message(' '.join(message[1::]),utils.BPC,True)
+			print(to_send)
+			self.sock.sendall(to_send)
+		elif message == '/health' or message[0] == 'task':
+			to_send = utils.create_text_message(' '.join(message[0::]),utils.BPC,True)
+			print(to_send)
 			self.sock.sendall(to_send)
 		else:
-			to_send = utils.create_text_message(''.join(message[0::]),utils.BPC)
+			to_send = utils.create_text_message(' '.join(message[0::]),utils.BPC)
 			self.sock.sendall(to_send)
 	def receive(self, timeout = 0.001):
 			if self.connection_state == False:

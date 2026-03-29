@@ -50,6 +50,7 @@ class Cli:
         print("\033[H\033[J", end="")
     def _parse_cmd(self, cmd : str):
         cmd_tab = cmd.split(" ")
+        print(cmd_tab)
         match cmd_tab[0]:
             case '/help':
                 self._clear_terminal()
@@ -57,15 +58,15 @@ class Cli:
             case '/quit' | '/exit' | '/q':
                 self.client.close()
             case '/send':
-                self.client.send(' '.join(cmd_tab[1::]))
+                self.client.send(cmd_tab[1::])
             case '/clear':
                 self._clear_terminal()
             case '/health':
                 self.client.send(cmd_tab[0])
-            case '.':
-                self.messager.get_message()
+            case 'task':
+                self.client.send(cmd_tab)
             case _:
-                self.client.send(' '.join(cmd_tab[0::]))
+                self.client.send(cmd_tab)
     def listen_to_user(self):
         with patch_stdout(): #assure que l'ecriture sur le terminal ne se fait pas sur la cli
             raw_cmd = prompt("> ") 

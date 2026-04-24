@@ -1,25 +1,45 @@
-import cli, connection_manager, utils, message_manager, threading, time
+import sys
+import threading
+from PySide6.QtWidgets import QApplication, QWidget, QVBoxLayout
+from PySide6.QtUiTools import QUiLoader
+import connection_manager, message_manager, utils, ui
 
-CONNECTION = True
 ADDRESS = 'vlbelintrocrypto.hevs.ch'
 PORT = 6000
 
-my_client = connection_manager.Client()
-my_client.connect(ADDRESS, PORT)
-messager = message_manager.MessageHandler(my_client)
-terminal = cli.Cli(my_client, messager)
+class App(QWidget):
+    def __init__(self):
+        super().__init__()
+        loader = QUiLoader()
+        self.ui = loader.load("Secure_chat.ui")
+        main_layout = QVBoxLayout(self) 
+        main_layout.addWidget(self.ui)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.client = connection_manager.Client()
+        self.client.connect(ADDRESS, PORT)
+        self.messager = message_manager.MessageHandler(self.client)
+        
+        self.bridge = ui.UIBridge(self.ui, self.client, self.messager)
+        
+        if self.client.connection_state:
+            self.thread_ecoute = threading.Thread(target=self.gui_listen_loop, daemon=True)
+            self.thread_ecoute.start()
+            self.bridge.new_message_signal.emit("Serveur", "Connecté au serveur avec succès !")
+        else:
+            self.bridge.new_message_signal.emit("Error", "Échec de la connexion au serveur.")
 
-def ecoute_serveur():
-    while my_client.connection_state:
-        data = my_client.receive()
-        if data is not None:
-            messager.add_data(data)
-            messager.afficher_messages()
-        time.sleep(0.01)
+    def gui_listen_loop(self):
+        while self.client.connection_state:
+            data = self.client.receive()
+            if data:
+                self.messager.add_data(data)
+                for msg in self.messager.get_message():
+                    self.bridge.message_list.append(utils.decode_ints(msg[6::], 4))
+                    text = utils.parse_text_message(msg, 4)
+                    self.bridge.new_message_signal.emit("Serveur", text)
 
-if my_client.connection_state == True:
-    terminal.afficher_menu()
-    thread_ecoute = threading.Thread(target=ecoute_serveur, daemon=True) #daemon: le thread s'arrete tout seul a la fin du programme
-    thread_ecoute.start()
-    while my_client.connection_state:
-        cmd = terminal.listen_to_user()
+app = QApplication(sys.argv)
+window = App()
+window.show()
+sys.exit(app.exec())
